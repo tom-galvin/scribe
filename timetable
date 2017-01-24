@@ -1,3 +1,5 @@
+# my cool timetable
+%init(Good Lecture)=good
 mon: Good Lecture @10
 tue: Amazing Lecture @11+12, Seminar 1 @15
 wed: Great Lecture @9, Good Lecture @15
