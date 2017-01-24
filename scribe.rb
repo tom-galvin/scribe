@@ -7,7 +7,8 @@ NOTES_DIR='~/notes/'
 
 # Return a command to execute when the notes file has been executed.
 def get_command(path)
-  "gnome-terminal -e \"vim -c 'normal GA' #{path}\""
+  #"gnome-terminal -e \"vim -c 'normal GA' #{path}\""
+  "gvim -c 'normal GA' #{path}"
 end
 
 # Turn an event name (eg. "Doing This and That") into an initialism
@@ -28,33 +29,46 @@ end
 # to hashes of hours to event names. For example, to get the name
 # of the event at 2pm on Thursday, you might do this:
 #
+# Configuration keys stored in 'config' item
+#
 # timetable = read_timetable('timetable')
 # event_at_2pm_thurs = timetable['thu'][14]
 def read_timetable(filename)
-  Hash[File.readlines(filename).map do |line|
+  config = {}
+  h = Hash[File.readlines(filename).map do |line|
     # Split the line at the colon to get the day and the content
-    day_of_week, event_string = *line
-      .chomp
-      .split(':')
-      .map(&:strip)
-    day_of_week.downcase!
+    if line.start_with? '#'
+      nil # ignore
+    elsif line.start_with? '%'
+      name, value = line[1..-1].chomp.split('=', 2)
+      config[name] = value
+      nil
+    else
+      day_of_week, event_string = *line
+        .chomp
+        .split(':')
+        .map(&:strip)
+      day_of_week.downcase!
 
-    events = Hash[event_string
-      .split(',')
-      .map do |event|
-        # For each event on this day, get the name and time string
-        # Where an event spanning multiple hours (eg. at both 9 and
-        # 10 am can be given as "@9+10")
-        name, time_string = *event
-          .split('@')
-          .map(&:strip)
-        time_string
-          .split('+')
-          .map(&:to_i)
-          .map {|hour| [hour, name]}
-      end.flatten(1)]
-    [day_of_week, events]
-  end]
+      events = Hash[event_string
+        .split(',')
+        .map do |event|
+          # For each event on this day, get the name and time string
+          # Where an event spanning multiple hours (eg. at both 9 and
+          # 10 am can be given as "@9+10")
+          name, time_string = *event
+            .split('@')
+            .map(&:strip)
+          time_string
+            .split('+')
+            .map(&:to_i)
+            .map {|hour| [hour, name]}
+        end.flatten(1)]
+      [day_of_week, events]
+    end
+  end.reject(&:nil?)]
+  h['config'] = config
+  h
 end
 
 now = DateTime.now
@@ -73,7 +87,7 @@ else
     event_name = event_day[hour]
   end
   if event_name
-    event_initialism = initialism(event_name)
+    event_initialism = timetable['config']["init(#{event_name})"] || initialism(event_name)
   else
     event_name = "Etcetera"
     event_initialism = "Etc"
